@@ -1,10 +1,11 @@
 import streamlit as st
 import string
 
-# =========================
+# ======================================================
 # DATASET
-# =========================
+# ======================================================
 ALPHABET = string.ascii_uppercase
+CATEGORY_COUNT = 5
 
 ITEM_ID_MAP = {
     'A': '00012EB7',
@@ -35,109 +36,108 @@ ITEM_ID_MAP = {
     'Z': '000A27'
 }
 
-# Reverse lookup untuk dekripsi
-REVERSE_ITEM_MAP = {v: k for k, v in ITEM_ID_MAP.items()}
-
-CATEGORY_COUNT = 5
-
-# =========================
+# ======================================================
 # FUNGSI UTILITAS
-# =========================
+# ======================================================
 def key_to_number(key):
     return sum(ALPHABET.index(k) + 1 for k in key)
 
 def caesar_shift(text, shift):
-    result = ""
-    for char in text:
-        idx = ALPHABET.index(char)
-        result += ALPHABET[(idx + shift) % 26]
-    return result
+    return "".join(
+        ALPHABET[(ALPHABET.index(c) + shift) % 26] for c in text
+    )
 
 def caesar_unshift(text, shift):
-    result = ""
-    for char in text:
-        idx = ALPHABET.index(char)
-        result += ALPHABET[(idx - shift) % 26]
-    return result
+    return "".join(
+        ALPHABET[(ALPHABET.index(c) - shift) % 26] for c in text
+    )
 
-def extract_suffix_middle(item_id):
+def extract_block(item_id):
     suffix = item_id[-2:]
     middle = item_id[-4:-2]
     return suffix + middle
 
-def rebuild_item_id(block):
-    suffix = block[:2]
-    middle = block[2:]
-    return "0001" + middle + suffix
+# ======================================================
+# INVERSE MAPPING (REVISI PENTING)
+# ======================================================
+BLOCK_TO_CHAR = {
+    extract_block(item_id): char
+    for char, item_id in ITEM_ID_MAP.items()
+}
 
-# =========================
+# ======================================================
 # STREAMLIT UI
-# =========================
+# ======================================================
 st.title("🔐 Skyrim Cryptography Demo")
-st.caption("Enkripsi & Dekripsi berbasis Item ID Skyrim")
+st.caption("Enkripsi & Dekripsi menggunakan Item ID Skyrim")
 
-mode = st.radio("Pilih Mode", ["Enkripsi", "Dekripsi"])
-
+mode = st.radio("Mode Operasi", ["Enkripsi", "Dekripsi"])
 key = st.text_input("Masukkan Key", "").upper()
 
-# =========================
+# ======================================================
 # ENKRIPSI
-# =========================
+# ======================================================
 if mode == "Enkripsi":
     plaintext = st.text_input("Masukkan Plaintext", "").upper()
 
     if st.button("Encrypt"):
-        if plaintext and key:
-            total_key = key_to_number(key)
-            shift = (total_key + len(plaintext) + len(key)) % CATEGORY_COUNT
+        if not plaintext or not key:
+            st.warning("Plaintext dan Key wajib diisi!")
+            st.stop()
 
-            st.subheader("🔢 Detail Perhitungan")
-            st.write("Total nilai key:", total_key)
-            st.write("Nilai shift:", shift)
+        total_key = key_to_number(key)
+        shift = (total_key + len(plaintext) + len(key)) % CATEGORY_COUNT
 
-            shifted_text = caesar_shift(plaintext, shift)
-            st.subheader("🔁 Caesar Shift Result")
-            st.code(shifted_text)
+        st.subheader("🔢 Perhitungan Shift")
+        st.write("Total nilai key:", total_key)
+        st.write("Nilai shift:", shift)
 
-            cipher_blocks = []
-            st.subheader("🗃️ Mapping Item ID")
-            for char in shifted_text:
-                item_id = ITEM_ID_MAP[char]
-                block = extract_suffix_middle(item_id)
-                cipher_blocks.append(block)
-                st.write(f"{char} → {item_id} → {block}")
+        shifted = caesar_shift(plaintext, shift)
+        st.subheader("🔁 Caesar Shift Result")
+        st.code(shifted)
 
-            st.subheader("🔐 Ciphertext Akhir")
-            st.code(" ".join(cipher_blocks))
-        else:
-            st.warning("Plaintext dan Key tidak boleh kosong!")
+        blocks = []
+        st.subheader("🗃️ Mapping Item ID")
+        for char in shifted:
+            item_id = ITEM_ID_MAP[char]
+            block = extract_block(item_id)
+            blocks.append(block)
+            st.write(f"{char} → {item_id} → {block}")
 
-# =========================
+        st.subheader("🔐 Ciphertext Akhir")
+        st.code(" ".join(blocks))
+
+# ======================================================
 # DEKRIPSI
-# =========================
+# ======================================================
 else:
     ciphertext = st.text_area("Masukkan Ciphertext (pisahkan dengan spasi)")
 
     if st.button("Decrypt"):
-        if ciphertext and key:
-            blocks = ciphertext.split()
+        if not ciphertext or not key:
+            st.warning("Ciphertext dan Key wajib diisi!")
+            st.stop()
 
-            total_key = key_to_number(key)
-            shift = (total_key + len(blocks) + len(key)) % CATEGORY_COUNT
+        blocks = ciphertext.strip().split()
 
-            st.subheader("🔢 Detail Perhitungan")
-            st.write("Nilai shift:", shift)
+        total_key = key_to_number(key)
+        shift = (total_key + len(blocks) + len(key)) % CATEGORY_COUNT
 
-            shifted_text = ""
-            st.subheader("🧩 Rekonstruksi Item ID")
-            for block in blocks:
-                item_id = rebuild_item_id(block)
-                char = REVERSE_ITEM_MAP.get(item_id, "?")
-                shifted_text += char
-                st.write(f"{block} → {item_id} → {char}")
+        st.subheader("🔢 Perhitungan Shift")
+        st.write("Nilai shift:", shift)
 
-            st.subheader("🔁 Caesar Shift Balik")
-            plaintext = caesar_unshift(shifted_text, shift)
-            st.code(plaintext)
-        else:
-            st.warning("Ciphertext dan Key tidak boleh kosong!")
+        shifted_text = ""
+        st.subheader("🧩 Inverse Mapping Ciphertext")
+
+        for block in blocks:
+            char = BLOCK_TO_CHAR.get(block)
+            if char is None:
+                st.error(f"Ciphertext tidak valid: {block}")
+                st.stop()
+            shifted_text += char
+            st.write(f"{block} → {char}")
+
+        plaintext = caesar_unshift(shifted_text, shift)
+
+        st.subheader("🔓 Plaintext Hasil Dekripsi")
+        st.code(plaintext)
