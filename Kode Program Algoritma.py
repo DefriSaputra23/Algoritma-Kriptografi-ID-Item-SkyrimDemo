@@ -77,14 +77,15 @@ BLOCK_TO_CHAR = {
 st.title("🔐 Skyrim Cryptography Demo")
 st.caption("Enkripsi & Dekripsi berbasis Item ID Skyrim")
 
-mode = st.radio("Mode Operasi", ["Enkripsi", "Dekripsi"])
-key = st.text_input("Masukkan Key", "").upper()
-
 st.markdown("### 📂 Dokumentasi & Dataset")
 st.markdown(
     "[🔗 Lihat Dataset & Dokumentasi](https://drive.google.com/drive/folders/1CqIbSM2IWldEGEs19m1jf85rn9GWHttZ?usp=sharing)",
     unsafe_allow_html=True
 )
+
+mode = st.radio("Mode Operasi", ["Enkripsi", "Dekripsi"])
+key = st.text_input("Masukkan Key", "").upper()
+
 
 # ======================================================
 # ENKRIPSI
