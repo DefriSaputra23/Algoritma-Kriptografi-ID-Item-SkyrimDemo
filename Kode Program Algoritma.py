@@ -146,6 +146,11 @@ def decrypt(ciphertext, key):
 st.title("🔐 Skyrim Cryptography Demo")
 st.caption("Clean UI dengan Full Encryption & Decryption Log")
 
+st.markdown("### 📂 Dokumentasi & Dataset")
+st.markdown(
+    "[🔗 Lihat Dataset & Dokumentasi](https://drive.google.com/drive/folders/1CqIbSM2IWldEGEs19m1jf85rn9GWHttZ?usp=sharing)",
+    unsafe_allow_html=True
+    
 mode = st.radio("Mode Operasi", ["Enkripsi", "Dekripsi"])
 key = st.text_input("Masukkan Key").upper()
 
