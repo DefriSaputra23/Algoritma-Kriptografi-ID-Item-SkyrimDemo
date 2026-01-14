@@ -63,12 +63,12 @@ BLOCK_TO_CHAR = {
 }
 
 # ======================================================
-# ENCRYPTION CORE (WITH SILENT LOG)
+# ENKRIPSI (DENGAN LOG LENGKAP)
 # ======================================================
 def encrypt(plaintext, key):
     log = []
 
-    log.append(f"Plaintext: {plaintext}")
+    log.append(f"Plaintext awal: {plaintext}")
     log.append(f"Key: {key}")
 
     total_key = key_to_number(key)
@@ -80,34 +80,77 @@ def encrypt(plaintext, key):
     log.append(f"Final shift: {shift}")
 
     shifted = caesar_shift(plaintext, shift)
-    log.append(f"Caesar result: {shifted}")
+    log.append(f"Hasil Caesar Shift: {shifted}")
 
     blocks = []
+    log.append("Mapping karakter ke Item ID:")
+
     for c in shifted:
         if c in ALPHABET:
-            block = extract_block(ITEM_ID_MAP[c])
+            full_id = ITEM_ID_MAP[c]
+            block = extract_block(full_id)
             blocks.append(block)
-            log.append(f"{c} -> {block}")
+
+            log.append(
+                f"{c} → Item ID FULL: {full_id} → Block: {block}"
+            )
         else:
             blocks.append(c)
-            log.append("Space preserved")
+            log.append("Spasi dipertahankan")
 
     ciphertext = " ".join(blocks)
-    log.append(f"Ciphertext: {ciphertext}")
+    log.append(f"Ciphertext akhir: {ciphertext}")
 
     return ciphertext, log
+
+# ======================================================
+# DEKRIPSI (DENGAN LOG LENGKAP)
+# ======================================================
+def decrypt(ciphertext, key):
+    log = []
+
+    tokens = ciphertext.split(" ")
+    log.append(f"Ciphertext: {ciphertext}")
+    log.append(f"Key: {key}")
+
+    total_key = key_to_number(key)
+    huruf_count = sum(1 for t in tokens if t in BLOCK_TO_CHAR)
+    shift = (total_key + huruf_count + len(key)) % CATEGORY_COUNT
+
+    log.append(f"Final shift: {shift}")
+
+    shifted_text = ""
+    log.append("Mapping block ke karakter:")
+
+    for t in tokens:
+        if t in BLOCK_TO_CHAR:
+            char = BLOCK_TO_CHAR[t]
+            full_id = ITEM_ID_MAP[char]
+
+            shifted_text += char
+            log.append(
+                f"Block: {t} → Item ID FULL: {full_id} → Huruf: {char}"
+            )
+        else:
+            shifted_text += " "
+            log.append("Spasi dipertahankan")
+
+    plaintext = caesar_unshift(shifted_text, shift)
+    log.append(f"Plaintext akhir: {plaintext}")
+
+    return plaintext, log
 
 # ======================================================
 # STREAMLIT UI
 # ======================================================
 st.title("🔐 Skyrim Cryptography Demo")
-st.caption("Clean UI dengan Logging Proses Enkripsi")
+st.caption("Clean UI dengan Full Encryption & Decryption Log")
 
 mode = st.radio("Mode Operasi", ["Enkripsi", "Dekripsi"])
 key = st.text_input("Masukkan Key").upper()
 
 # ======================================================
-# ENKRIPSI UI (BERSIH)
+# ENKRIPSI UI
 # ======================================================
 if mode == "Enkripsi":
     plaintext = st.text_area("Masukkan Plaintext").upper()
@@ -122,12 +165,12 @@ if mode == "Enkripsi":
         st.subheader("🔐 Ciphertext")
         st.code(ciphertext)
 
-        with st.expander("📜 Lihat Log Proses Enkripsi"):
+        with st.expander("📜 Log Enkripsi (Detail Lengkap)"):
             for line in log:
                 st.write(line)
 
 # ======================================================
-# DEKRIPSI
+# DEKRIPSI UI
 # ======================================================
 else:
     ciphertext = st.text_area("Masukkan Ciphertext")
@@ -137,17 +180,11 @@ else:
             st.warning("Ciphertext dan Key wajib diisi!")
             st.stop()
 
-        tokens = ciphertext.split(" ")
-        total_key = key_to_number(key)
-        huruf_count = sum(1 for t in tokens if t in BLOCK_TO_CHAR)
-        shift = (total_key + huruf_count + len(key)) % CATEGORY_COUNT
-
-        shifted_text = "".join(
-            BLOCK_TO_CHAR[t] if t in BLOCK_TO_CHAR else " "
-            for t in tokens
-        )
-
-        plaintext = caesar_unshift(shifted_text, shift)
+        plaintext, log = decrypt(ciphertext, key)
 
         st.subheader("🔓 Plaintext")
         st.code(plaintext)
+
+        with st.expander("📜 Log Dekripsi (Detail Lengkap)"):
+            for line in log:
+                st.write(line)
