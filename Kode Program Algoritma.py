@@ -43,59 +43,71 @@ def key_to_number(key):
     return sum(ALPHABET.index(k) + 1 for k in key if k in ALPHABET)
 
 def caesar_shift(text, shift):
-    result = ""
-    for c in text:
-        if c in ALPHABET:
-            result += ALPHABET[(ALPHABET.index(c) + shift) % 26]
-        else:
-            result += c
-    return result
+    return "".join(
+        ALPHABET[(ALPHABET.index(c) + shift) % 26] if c in ALPHABET else c
+        for c in text
+    )
 
 def caesar_unshift(text, shift):
-    result = ""
-    for c in text:
-        if c in ALPHABET:
-            result += ALPHABET[(ALPHABET.index(c) - shift) % 26]
-        else:
-            result += c
-    return result
+    return "".join(
+        ALPHABET[(ALPHABET.index(c) - shift) % 26] if c in ALPHABET else c
+        for c in text
+    )
 
 def extract_block(item_id):
     return item_id[-2:] + item_id[-4:-2]
 
-# ======================================================
-# INVERSE MAPPING
-# ======================================================
 BLOCK_TO_CHAR = {
     extract_block(item_id): char
     for char, item_id in ITEM_ID_MAP.items()
 }
 
 # ======================================================
-# LOGGING
+# ENCRYPTION CORE (WITH SILENT LOG)
 # ======================================================
-def add_log(msg):
-    if "encrypt_log" not in st.session_state:
-        st.session_state.encrypt_log = []
-    st.session_state.encrypt_log.append(msg)
+def encrypt(plaintext, key):
+    log = []
+
+    log.append(f"Plaintext: {plaintext}")
+    log.append(f"Key: {key}")
+
+    total_key = key_to_number(key)
+    huruf_count = sum(1 for c in plaintext if c in ALPHABET)
+    shift = (total_key + huruf_count + len(key)) % CATEGORY_COUNT
+
+    log.append(f"Total key value: {total_key}")
+    log.append(f"Alphabet count: {huruf_count}")
+    log.append(f"Final shift: {shift}")
+
+    shifted = caesar_shift(plaintext, shift)
+    log.append(f"Caesar result: {shifted}")
+
+    blocks = []
+    for c in shifted:
+        if c in ALPHABET:
+            block = extract_block(ITEM_ID_MAP[c])
+            blocks.append(block)
+            log.append(f"{c} -> {block}")
+        else:
+            blocks.append(c)
+            log.append("Space preserved")
+
+    ciphertext = " ".join(blocks)
+    log.append(f"Ciphertext: {ciphertext}")
+
+    return ciphertext, log
 
 # ======================================================
 # STREAMLIT UI
 # ======================================================
 st.title("🔐 Skyrim Cryptography Demo")
-st.caption("Enkripsi & Dekripsi berbasis Item ID Skyrim")
-
-st.markdown("### 📂 Dokumentasi & Dataset")
-st.markdown(
-    "[🔗 Lihat Dataset & Dokumentasi](https://drive.google.com/drive/folders/1CqIbSM2IWldEGEs19m1jf85rn9GWHttZ?usp=sharing)",
-    unsafe_allow_html=True
-)
+st.caption("Clean UI dengan Logging Proses Enkripsi")
 
 mode = st.radio("Mode Operasi", ["Enkripsi", "Dekripsi"])
 key = st.text_input("Masukkan Key").upper()
 
 # ======================================================
-# ENKRIPSI
+# ENKRIPSI UI (BERSIH)
 # ======================================================
 if mode == "Enkripsi":
     plaintext = st.text_area("Masukkan Plaintext").upper()
@@ -105,44 +117,14 @@ if mode == "Enkripsi":
             st.warning("Plaintext dan Key wajib diisi!")
             st.stop()
 
-        st.session_state.encrypt_log = []
+        ciphertext, log = encrypt(plaintext, key)
 
-        add_log(f"Plaintext awal: {plaintext}")
-        add_log(f"Key digunakan: {key}")
-
-        total_key = key_to_number(key)
-        huruf_count = sum(1 for c in plaintext if c in ALPHABET)
-        shift = (total_key + huruf_count + len(key)) % CATEGORY_COUNT
-
-        add_log(f"Total nilai key: {total_key}")
-        add_log(f"Jumlah huruf alfabet: {huruf_count}")
-        add_log(f"Panjang key: {len(key)}")
-        add_log(f"Shift akhir: {shift}")
-
-        shifted = caesar_shift(plaintext, shift)
-        add_log(f"Hasil Caesar Shift: {shifted}")
-
-        blocks = []
-        add_log("Mapping karakter ke Item ID:")
-
-        for c in shifted:
-            if c in ALPHABET:
-                block = extract_block(ITEM_ID_MAP[c])
-                blocks.append(block)
-                add_log(f"{c} → {block}")
-            else:
-                blocks.append(c)
-                add_log("Spasi dipertahankan")
-
-        ciphertext = " ".join(blocks)
-        add_log(f"Ciphertext akhir: {ciphertext}")
-
-        st.subheader("🔐 Ciphertext Akhir")
+        st.subheader("🔐 Ciphertext")
         st.code(ciphertext)
 
-        with st.expander("📜 Encryption Log (Detail Proses)"):
-            for log in st.session_state.encrypt_log:
-                st.write(log)
+        with st.expander("📜 Lihat Log Proses Enkripsi"):
+            for line in log:
+                st.write(line)
 
 # ======================================================
 # DEKRIPSI
@@ -156,19 +138,16 @@ else:
             st.stop()
 
         tokens = ciphertext.split(" ")
-
         total_key = key_to_number(key)
         huruf_count = sum(1 for t in tokens if t in BLOCK_TO_CHAR)
         shift = (total_key + huruf_count + len(key)) % CATEGORY_COUNT
 
-        shifted_text = ""
-        for t in tokens:
-            if t in BLOCK_TO_CHAR:
-                shifted_text += BLOCK_TO_CHAR[t]
-            else:
-                shifted_text += " "
+        shifted_text = "".join(
+            BLOCK_TO_CHAR[t] if t in BLOCK_TO_CHAR else " "
+            for t in tokens
+        )
 
         plaintext = caesar_unshift(shifted_text, shift)
 
-        st.subheader("🔓 Plaintext Hasil Dekripsi")
+        st.subheader("🔓 Plaintext")
         st.code(plaintext)
