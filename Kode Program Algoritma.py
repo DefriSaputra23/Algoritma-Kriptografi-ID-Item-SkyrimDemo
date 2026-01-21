@@ -144,7 +144,7 @@ def decrypt(ciphertext, key):
 # STREAMLIT UI
 # ======================================================
 st.title("🔐 Skyrim Cryptography Demo")
-st.caption("Clean UI dengan Full Encryption & Decryption Log")
+st.caption("Kriptografi menggunakan Game Skyrim")
 
 st.markdown("### 📂 Dokumentasi & Dataset")
 st.markdown(
