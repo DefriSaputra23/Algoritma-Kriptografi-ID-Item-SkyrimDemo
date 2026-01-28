@@ -1,7 +1,3 @@
-#Nama    : DEFRI BAGUS SAPUTRA
-#NIM     : 24.83.1066
-#Kelas   : 24TK01
-
 import streamlit as st
 import string
 
